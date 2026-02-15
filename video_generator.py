@@ -241,8 +241,8 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         "-i", audio_path,                     # 2: Audio
         "-filter_complex",
         (
-            # 1. FONDO: Escalar ancho a 1280 y recortar altura a 720 (Centrado)
-            f"[0:v]scale=1280:-2,crop=1280:720:(iw-ow)/2:(ih-oh)/2[bg];"
+# 1. FONDO: Escala INTELIGENTE (Cover) para que nunca falte imagen
+            f"[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720:(iw-ow)/2:(ih-oh)/2[bg];"
             
             # 2. PRESENTADOR: Escalar altura a 720 (ancho auto) y Chroma Key
             f"[1:v]scale=-1:720[v_scaled];"
