@@ -53,7 +53,7 @@ LOCKS_DIR = os.path.join(BASE_DIR, "locks_history")
 PRESENTER_FILENAME = "presenter.mp4"
 
 # Ajustes Avanzados para FFmpeg (Chroma Key / Pantalla Verde)
-CHROMA_COLOR = "0x00bf63" 
+CHROMA_COLOR = "0x00b758" 
 CHROMA_SIMILARITY = "0.15" 
 CHROMA_BLEND = "0.05"
 
@@ -244,47 +244,41 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
     # Comando FFmpeg OPTIMIZADO: 720x1280 (720p)
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1", "-i", image_path,        
-        "-i", presenter_path,                 
-        "-i", audio_path,                     
+        "-loop", "1", "-i", image_path,        # Entrada 0: Imagen de fondo
+        "-i", presenter_path,                 # Entrada 1: Presentador vertical (pantalla verde)
+        "-i", audio_path,                     # Entrada 2: Audio TTS
         "-filter_complex",
         (
-            # 1. Lienzo negro de 720x1280
-            "color=c=black:s=720x1280[canvas];"
+            # 1. Escalar y recortar la imagen de fondo para que llene el formato 1080x1920
+            f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920:(iw-ow)/2:(ih-oh)/2[bg];"
             
-            # 2. Escalar imagen de fondo a 720 de ancho
-            "[0:v]scale=720:-1[img_scaled];"
+            # 2. Escalar el video del presentador para que se ajuste a la anchura (1080)
+            f"[1:v]scale=1080:-1[v_scaled];"
             
-            # 3. Superponer imagen en el lienzo (ajustado el Y para 720p)
-            "[canvas][img_scaled]overlay=(W-w)/2:(H-h)/2-100[bg];"
-            
-            # 4. Escalar presentador a 720 de ancho
-            "[1:v]scale=720:-1[v_scaled];"
-            
-            # 5. Chroma Key
+            # 3. Aplicar Chroma Key (quitar pantalla verde) con los NUEVOS VALORES
             f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
             
-            # 6. Efecto Boomerang
-            "[v_keyed]split[main][reverse_copy];"
-            "[reverse_copy]reverse[v_reversed];"
-            "[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
-            "[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
+            # 4. Crear efecto boomerang/loop para el presentador
+            f"[v_keyed]split[main][reverse_copy];"
+            f"[reverse_copy]reverse[v_reversed];"
+            f"[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
+            f"[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
             
-            # 7. Unir capas
-            "[bg][presenter_loop]overlay=0:0[comp];"
+            # 5. Superponer el presentador sobre el fondo
+            # ANTES: overlay=(W-w)/2:(H-h)/2 (centrado)
+            # AHORA: overlay=(W-w)/2:(H-h)/2+200 👈 HE BAJADO LA IMAGEN 200 PÍXELES
+            f"[bg][presenter_loop]overlay=(W-w)/2:(H-h)/2+200:shortest=1[comp];"
             
-            # 8. Texto ajustado a 720p (fuente más chica a 32, posición Y a 770)
-            f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
-            f"fontcolor=white:fontsize=32:line_spacing=10:"
-            f"shadowcolor=black@1.0:shadowx=3:shadowy=3:"
-            f"x=30:y=770[outv]"
+            # 6. Dibujar el título abajo (ajustado para Shorts)
+            # ANTES: x=50:y=h-350
+            # AHORA: x=50:y=h-150 👈 HE BAJADO EL TÍTULO MUCHO MÁS, a 150 píxeles del borde inferior
+            f"[comp]drawtext=fontfile='{font_path}':text='{clean_title}':"
+            f"fontcolor=white:fontsize=50:line_spacing=15:"
+            f"shadowcolor=black@1.0:shadowx=5:shadowy=5:"
+            f"x=50:y=h-150[outv]"
         ),
         "-map", "[outv]", "-map", "2:a",        
-        "-c:v", "libx264", 
-        "-preset", "ultrafast", 
-        "-crf", "28",           # Optimiza el tamaño del video sin perder calidad visible
-        "-threads", "2",        # IMPORTANTE: Limita a 2 hilos para que la t3.micro no colapse
-        "-r", "24", 
+        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24", 
         "-c:a", "aac", "-b:a", "128k", "-shortest", output_path 
     ]
 
@@ -525,7 +519,7 @@ def process_video_task(text_content, title, image_url, article_id, article_url="
             logger.error("Fallo durante el renderizado del video.")
             return None
 
-        # ---------------------------------------------------------
+# ---------------------------------------------------------
         # PASO 4: CONSTRUCCIÓN DE LA DESCRIPCIÓN 
         # ---------------------------------------------------------
         logger.info("✍️ Construyendo descripción para YouTube...")
@@ -550,7 +544,8 @@ def process_video_task(text_content, title, image_url, article_id, article_url="
         desc += "👉 https://www.youtube.com/@DesdeRelaxStation/streams\n\n"
 
         # 4.4. HASHTAGS GLOBALES
-        desc += "#noticias #actualidad #internacional"
+        # 👈 HE CAMBIADO ESTA LÍNEA PARA INCLUIR #Shorts Y #short al principio
+        desc += "#Shorts #short #noticias #actualidad #internacional"
         
         # ---------------------------------------------------------
         # PASO 5: SUBIDA A YOUTUBE
