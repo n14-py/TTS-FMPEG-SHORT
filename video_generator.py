@@ -222,6 +222,85 @@ async def generate_audio_edge(text, output_file):
         return False
 
 def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
+    """Renderiza el video final en 720p para Shorts (Optimizado para t3.micro)"""
+    SHORT_PRESENTER_FILENAME = "presenter_short.mp4" 
+    presenter_path = os.path.join(ASSETS_DIR, SHORT_PRESENTER_FILENAME)
+    font_path = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+    clean_title = prepare_text_for_video(text_title)
+
+    if not os.path.exists(presenter_path):
+        logger.error(f"❌ No se encontró el video del presentador vertical en: {presenter_path}")
+        return False
+
+    # Guardar el texto en un archivo temporal para evitar errores de saltos de línea en FFmpeg
+    text_file_path = os.path.join(TEMP_IMG, f"title_{uuid.uuid4().hex[:6]}.txt")
+    try:
+        with open(text_file_path, "w", encoding="utf-8") as f:
+            f.write(clean_title)
+    except Exception as e:
+        logger.error(f"❌ Error al crear el archivo de texto para FFmpeg: {e}")
+        return False
+
+    # Comando FFmpeg OPTIMIZADO: 720x1280 (720p)
+    cmd = [
+        "ffmpeg", "-y",
+        "-loop", "1", "-i", image_path,        
+        "-i", presenter_path,                 
+        "-i", audio_path,                     
+        "-filter_complex",
+        (
+            # 1. Lienzo negro de 720x1280
+            "color=c=black:s=720x1280[canvas];"
+            
+            # 2. Escalar imagen de fondo a 720 de ancho
+            "[0:v]scale=720:-1[img_scaled];"
+            
+            # 3. Superponer imagen en el lienzo (ajustado el Y para 720p)
+            "[canvas][img_scaled]overlay=(W-w)/2:(H-h)/2-100[bg];"
+            
+            # 4. Escalar presentador a 720 de ancho
+            "[1:v]scale=720:-1[v_scaled];"
+            
+            # 5. Chroma Key
+            f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
+            
+            # 6. Efecto Boomerang
+            "[v_keyed]split[main][reverse_copy];"
+            "[reverse_copy]reverse[v_reversed];"
+            "[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
+            "[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
+            
+            # 7. Unir capas
+            "[bg][presenter_loop]overlay=0:0[comp];"
+            
+            # 8. Texto ajustado a 720p (fuente más chica a 32, posición Y a 770)
+            f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
+            f"fontcolor=white:fontsize=32:line_spacing=10:"
+            f"shadowcolor=black@1.0:shadowx=3:shadowy=3:"
+            f"x=30:y=770[outv]"
+        ),
+        "-map", "[outv]", "-map", "2:a",        
+        "-c:v", "libx264", 
+        "-preset", "ultrafast", 
+        "-crf", "28",           # Optimiza el tamaño del video sin perder calidad visible
+        "-threads", "2",        # IMPORTANTE: Limita a 2 hilos para que la t3.micro no colapse
+        "-r", "24", 
+        "-c:a", "aac", "-b:a", "128k", "-shortest", output_path 
+    ]
+
+    try:
+        logger.info("🎬 Iniciando renderizado FFmpeg en 720p (Optimizado para t3.micro)...")
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600, text=True)
+        return os.path.exists(output_path) and os.path.getsize(output_path) > 1000
+    except subprocess.TimeoutExpired:
+        logger.error("❌ ERROR CRÍTICO: El renderizado para Shorts superó el timeout.")
+        return False
+    except subprocess.CalledProcessError as err:
+        logger.error(f"❌ Fallo interno en FFmpeg. EL MOTIVO EXACTO ES:\n{err.stderr}")
+        return False
+    finally:
+        if os.path.exists(text_file_path):
+            os.remove(text_file_path)
     """Renderiza el video final para YouTube Shorts (vertical)"""
     SHORT_PRESENTER_FILENAME = "presenter_short.mp4" 
     presenter_path = os.path.join(ASSETS_DIR, SHORT_PRESENTER_FILENAME)
