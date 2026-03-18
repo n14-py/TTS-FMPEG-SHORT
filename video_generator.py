@@ -223,8 +223,6 @@ async def generate_audio_edge(text, output_file):
 
 def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
     """Renderiza el video final para YouTube Shorts (vertical)"""
-    # IMPORTANTE: Reemplaza el video del presentador por uno vertical (ej: presenter_short.mp4)
-    # y colócalo en la carpeta assets_video/
     SHORT_PRESENTER_FILENAME = "presenter_short.mp4" 
     presenter_path = os.path.join(ASSETS_DIR, SHORT_PRESENTER_FILENAME)
     font_path = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
@@ -237,44 +235,46 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
     # Comando FFmpeg para formato vertical (Shorts - 1080x1920)
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1", "-i", image_path,        # Entrada 0: Imagen de fondo
-        "-i", presenter_path,                 # Entrada 1: Presentador vertical (pantalla verde)
+        "-loop", "1", "-i", image_path,        # Entrada 0: Imagen de fondo de la noticia
+        "-i", presenter_path,                 # Entrada 1: Presentador vertical (con pantalla verde horizontal)
         "-i", audio_path,                     # Entrada 2: Audio TTS
         "-filter_complex",
         (
-            # 1. Escalar y recortar la imagen de fondo para que llene el formato 1080x1920
-            f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920:(iw-ow)/2:(ih-oh)/2[bg];"
+            # 1. NUEVO: Escalar imagen a 1080 de ancho (manteniendo proporción horizontal).
+            # Luego, la metemos en un fondo negro de 1080x1920.
+            # (oh-ih)/2-150 la desplaza un poquito hacia arriba para encajar en tu rectángulo verde.
+            f"[0:v]scale=1080:-1,pad=1080:1920:(ow-iw)/2:(oh-ih)/2-150:color=black[bg];"
             
-            # 2. Escalar el video del presentador para que se ajuste a la anchura (1080)
+            # 2. Escalar el video del presentador a 1080 de ancho
             f"[1:v]scale=1080:-1[v_scaled];"
             
-            # 3. Aplicar Chroma Key (quitar pantalla verde)
+            # 3. Aplicar Chroma Key para volver transparente el rectángulo verde
             f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
             
-            # 4. Crear efecto boomerang/loop para el presentador (esto lo mantenemos de tu código original)
+            # 4. Crear efecto boomerang/loop para el presentador
             f"[v_keyed]split[main][reverse_copy];"
             f"[reverse_copy]reverse[v_reversed];"
             f"[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
             f"[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
             
-            # 5. Superponer el presentador sobre el fondo (centrado)
-            f"[bg][presenter_loop]overlay=(W-w)/2:(H-h)/2:shortest=1[comp];"
+            # 5. Superponer la plantilla transparente sobre la imagen de la noticia
+            f"[bg][presenter_loop]overlay=0:0:shortest=1[comp];"
             
-            # 6. Dibujar el título abajo (ajustado para Shorts)
-            # x=30: a 30 píxeles del borde izquierdo
-            # y=h-300: a 300 píxeles del borde inferior (ajusta este valor según necesites)
+            # 6. NUEVO: Título colocado JUSTO DEBAJO (en la zona azul al lado del presentador).
+            # Cambiamos y=h-350 a y=1150 (ajustalo si quieres que suba o baje un poco).
+            # También reduje un poco el tamaño de la fuente a 45 para que encaje mejor.
             f"[comp]drawtext=fontfile='{font_path}':text='{clean_title}':"
-            f"fontcolor=white:fontsize=50:line_spacing=15:"
+            f"fontcolor=white:fontsize=45:line_spacing=15:"
             f"shadowcolor=black@1.0:shadowx=5:shadowy=5:"
-            f"x=50:y=h-350[outv]"
+            f"x=40:y=1150[outv]"
         ),
-        "-map", "[outv]", "-map", "2:a",        # Mapear video de salida y audio original
-        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24", # Configuración de video (24 FPS para Shorts)
-        "-c:a", "aac", "-b:a", "128k", "-shortest", output_path # Configuración de audio
+        "-map", "[outv]", "-map", "2:a",        
+        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24", 
+        "-c:a", "aac", "-b:a", "128k", "-shortest", output_path 
     ]
 
     try:
-        logger.info("🎬 Iniciando renderizado de Video para Shorts en FFmpeg (Timeout: 600s)...")
+        logger.info("🎬 Iniciando renderizado de Video para Shorts en FFmpeg...")
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
         
         return os.path.exists(output_path) and os.path.getsize(output_path) > 1000
