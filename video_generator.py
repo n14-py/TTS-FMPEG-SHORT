@@ -232,38 +232,40 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         logger.error(f"❌ No se encontró el video del presentador vertical en: {presenter_path}")
         return False
 
+    # 1. SOLUCIÓN: Guardar el texto en un archivo temporal para evitar errores de saltos de línea en FFmpeg
+    text_file_path = os.path.join(TEMP_IMG, f"title_{uuid.uuid4().hex[:6]}.txt")
+    try:
+        with open(text_file_path, "w", encoding="utf-8") as f:
+            f.write(clean_title)
+    except Exception as e:
+        logger.error(f"❌ Error al crear el archivo de texto para FFmpeg: {e}")
+        return False
+
     # Comando FFmpeg para formato vertical (Shorts - 1080x1920)
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1", "-i", image_path,        # Entrada 0: Imagen de fondo de la noticia
-        "-i", presenter_path,                 # Entrada 1: Presentador vertical (con pantalla verde horizontal)
-        "-i", audio_path,                     # Entrada 2: Audio TTS
+        "-loop", "1", "-i", image_path,        
+        "-i", presenter_path,                 
+        "-i", audio_path,                     
         "-filter_complex",
         (
-            # 1. NUEVO: Escalar imagen a 1080 de ancho (manteniendo proporción horizontal).
-            # Luego, la metemos en un fondo negro de 1080x1920.
-            # (oh-ih)/2-150 la desplaza un poquito hacia arriba para encajar en tu rectángulo verde.
-            f"[0:v]scale=1080:-1,pad=1080:1920:(ow-iw)/2:(oh-ih)/2-150:color=black[bg];"
+            # 2. SOLUCIÓN: Usar un lienzo negro independiente y colocar la imagen encima, evita crasheos de geometría.
+            "color=c=black:s=1080x1920[canvas];"
+            "[0:v]scale=1080:-1[img_scaled];"
+            "[canvas][img_scaled]overlay=(W-w)/2:(H-h)/2-150[bg];"
             
-            # 2. Escalar el video del presentador a 1080 de ancho
-            f"[1:v]scale=1080:-1[v_scaled];"
-            
-            # 3. Aplicar Chroma Key para volver transparente el rectángulo verde
+            "[1:v]scale=1080:-1[v_scaled];"
             f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
             
-            # 4. Crear efecto boomerang/loop para el presentador
-            f"[v_keyed]split[main][reverse_copy];"
-            f"[reverse_copy]reverse[v_reversed];"
-            f"[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
-            f"[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
+            "[v_keyed]split[main][reverse_copy];"
+            "[reverse_copy]reverse[v_reversed];"
+            "[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
+            "[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
             
-            # 5. Superponer la plantilla transparente sobre la imagen de la noticia
-            f"[bg][presenter_loop]overlay=0:0:shortest=1[comp];"
+            "[bg][presenter_loop]overlay=0:0[comp];"
             
-            # 6. NUEVO: Título colocado JUSTO DEBAJO (en la zona azul al lado del presentador).
-            # Cambiamos y=h-350 a y=1150 (ajustalo si quieres que suba o baje un poco).
-            # También reduje un poco el tamaño de la fuente a 45 para que encaje mejor.
-            f"[comp]drawtext=fontfile='{font_path}':text='{clean_title}':"
+            # 3. SOLUCIÓN: Usar textfile en lugar de text directamente
+            f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
             f"fontcolor=white:fontsize=45:line_spacing=15:"
             f"shadowcolor=black@1.0:shadowx=5:shadowy=5:"
             f"x=40:y=1150[outv]"
@@ -275,7 +277,9 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
 
     try:
         logger.info("🎬 Iniciando renderizado de Video para Shorts en FFmpeg...")
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+        
+        # 4. SOLUCIÓN: Capturar el error exacto quitando DEVNULL
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600, text=True)
         
         return os.path.exists(output_path) and os.path.getsize(output_path) > 1000
         
@@ -283,9 +287,13 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         logger.error("❌ ERROR CRÍTICO: El renderizado para Shorts superó el timeout.")
         return False
     except subprocess.CalledProcessError as err:
-        logger.error(f"❌ Fallo interno en FFmpeg al crear el Short.")
+        # AQUÍ ESTÁ LA MAGIA: Si vuelve a fallar, nos dirá el error EXACTO
+        logger.error(f"❌ Fallo interno en FFmpeg. EL MOTIVO EXACTO ES:\n{err.stderr}")
         return False
-
+    finally:
+        # Limpiamos el archivo de texto temporal
+        if os.path.exists(text_file_path):
+            os.remove(text_file_path)
 # ==============================================================================
 # 5. GESTIÓN Y SUBIDA A YOUTUBE (CON ROTACIÓN)
 # ==============================================================================
