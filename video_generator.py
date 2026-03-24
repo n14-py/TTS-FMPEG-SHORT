@@ -222,8 +222,8 @@ async def generate_audio_edge(text, output_file):
         return False
 
 def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
-    """Renderiza el video final para Shorts: Diseño Normal 'Mini' Centrado."""
-    # IMPORTANTE: Usamos el presentador NORMAL, no el vertical, para mantener el diseño original
+    """Renderiza el video final para Shorts: Presentador Full Screen Vertical por encima."""
+    # Aquí SÍ usamos tu presentador en formato vertical
     presenter_path = os.path.join(ASSETS_DIR, "presenter.mp4")
     font_path = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     clean_title = prepare_text_for_video(text_title)
@@ -232,7 +232,7 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         logger.error(f"❌ No se encontró el video del presentador en: {presenter_path}")
         return False
 
-    # Guardar texto en archivo temporal para evitar errores con caracteres raros en FFmpeg
+    # Guardar texto en archivo temporal para evitar errores con caracteres raros
     text_file_path = os.path.join(TEMP_IMG, f"title_{uuid.uuid4().hex[:6]}.txt")
     try:
         with open(text_file_path, "w", encoding="utf-8") as f:
@@ -241,51 +241,44 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         logger.error(f"❌ Error al crear el archivo de texto: {e}")
         return False
 
-    # AJUSTES DE CROMA (VERDE EXACTO DEL SERVER NORMAL Y SIMILITUD BAJA PARA PROTEGER EL AZUL)
+    # AJUSTES DE CROMA: Súper estricto para que SOLO borre el verde y salve el azul del traje
     CHROMA_COLOR = "0x00bf63"
-    CHROMA_SIMILARITY = "0.08" # Bajamos de 0.15 a 0.08 para que NO borre el color azul
+    CHROMA_SIMILARITY = "0.08" 
     CHROMA_BLEND = "0.05"
 
-    # Comando FFmpeg con la magia del "Mini" centrado
+    # Comando FFmpeg con la lógica de Capas (Fondo = Imagen | Frente = Presentador)
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1", "-i", image_path,        # [0:v] Imagen de la noticia
-        "-i", presenter_path,                  # [1:v] Presentador (Diseño normal)
+        "-loop", "1", "-i", image_path,        # [0:v] Imagen de la noticia (Capa de abajo)
+        "-i", presenter_path,                  # [1:v] Presentador Vertical (Capa de arriba)
         "-i", audio_path,                      # [2:a] Audio TTS
         "-filter_complex",
         (
-            # 1. Crear lienzo vertical negro (liviano para que la t3.micro no sufra)
-            "color=c=black:s=1080x1920[canvas];"
+            # 1. CAPA DE ABAJO (LA IMAGEN): La escalamos para que entre en 1080x1920
+            # SIN RECORTAR (mantiene su formato original) y la centramos en un lienzo negro.
+            "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black[bg_img];"
 
-            # 2. Preparar el fondo de la imagen exactamente como el video normal (1280x720)
-            "[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720:(iw-ow)/2:(ih-oh)/2[bg_normal];"
-
-            # 3. Escalar el video del presentador a 720 de alto
-            "[1:v]scale=-1:720[v_scaled];"
-
-            # 4. Quitar fondo verde (con el ajuste estricto para no borrar otros colores)
+            # 2. CAPA DE ARRIBA (EL PERIODISTA): Forzamos a 1080x1920 para que ocupe TODA LA PANTALLA
+            # y le aplicamos el croma para volver transparente el cuadro verde.
+            f"[1:v]scale=1080:1920[v_scaled];"
             f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
 
-            # 5. Efecto Boomerang continuo del presentador
+            # 3. Efecto Boomerang continuo del presentador
             "[v_keyed]split[main][reverse_copy];"
             "[reverse_copy]reverse[v_reversed];"
             "[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
             "[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
 
-            # 6. Unir el presentador con la imagen de fondo (Diseño normal)
-            "[bg_normal][presenter_loop]overlay=(W-w)/2:(H-h)/2:shortest=1[comp_normal];"
+            # 4. LA MAGIA (OVERLAY): Ponemos al Presentador POR ENCIMA de la Imagen.
+            # Como el presentador tiene el hueco transparente, la imagen se verá a través.
+            "[bg_img][presenter_loop]overlay=0:0:shortest=1[comp];"
 
-            # 7. Agregar el texto exactamente en la misma posición del servidor normal
-            f"[comp_normal]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
-            f"fontcolor=white:fontsize=40:line_spacing=12:"
+            # 5. EL TEXTO: Lo dibujamos por encima de todo. 
+            # Ajusté la posición (Y=h-350) para que quede bien en formato celular vertical.
+            f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
+            f"fontcolor=white:fontsize=50:line_spacing=15:"
             f"shadowcolor=black@1.0:shadowx=4:shadowy=4:"
-            f"x=30:y=h-145[landscape_final];"
-
-            # 8. ACHICAR EL DISEÑO (Hacerlo "Mini") para que quepa perfecto en la pantalla del celular (1080 de ancho)
-            "[landscape_final]scale=1080:-1[mini_landscape];"
-
-            # 9. Colocar el video Mini en todo el CENTRO del lienzo vertical negro
-            "[canvas][mini_landscape]overlay=0:(H-h)/2[outv]"
+            f"x=50:y=h-350[outv]"
         ),
         "-map", "[outv]", "-map", "2:a",
         "-c:v", "libx264", "-preset", "ultrafast", "-r", "24",
@@ -293,7 +286,7 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
     ]
 
     try:
-        logger.info("🎬 Iniciando renderizado FFmpeg (Diseño Normal Centrado)...")
+        logger.info("🎬 Iniciando renderizado FFmpeg (Presentador Vertical Full Screen)...")
         subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600, text=True)
         return os.path.exists(output_path) and os.path.getsize(output_path) > 1000
     except subprocess.TimeoutExpired:
@@ -306,7 +299,6 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         # Limpieza del archivo de texto
         if os.path.exists(text_file_path):
             os.remove(text_file_path)
-
 # ==============================================================================
 # 5. GESTIÓN Y SUBIDA A YOUTUBE (CON ROTACIÓN)
 # ==============================================================================
