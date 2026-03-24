@@ -222,151 +222,91 @@ async def generate_audio_edge(text, output_file):
         return False
 
 def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
-    """Renderiza el video final en 720p para Shorts (Optimizado para t3.micro)"""
-    SHORT_PRESENTER_FILENAME = "presenter_short.mp4" 
-    presenter_path = os.path.join(ASSETS_DIR, SHORT_PRESENTER_FILENAME)
+    """Renderiza el video final para Shorts: Diseño Normal 'Mini' Centrado."""
+    # IMPORTANTE: Usamos el presentador NORMAL, no el vertical, para mantener el diseño original
+    presenter_path = os.path.join(ASSETS_DIR, "presenter.mp4")
     font_path = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     clean_title = prepare_text_for_video(text_title)
 
     if not os.path.exists(presenter_path):
-        logger.error(f"❌ No se encontró el video del presentador vertical en: {presenter_path}")
+        logger.error(f"❌ No se encontró el video del presentador en: {presenter_path}")
         return False
 
-    # Guardar el texto en un archivo temporal para evitar errores de saltos de línea en FFmpeg
+    # Guardar texto en archivo temporal para evitar errores con caracteres raros en FFmpeg
     text_file_path = os.path.join(TEMP_IMG, f"title_{uuid.uuid4().hex[:6]}.txt")
     try:
         with open(text_file_path, "w", encoding="utf-8") as f:
             f.write(clean_title)
     except Exception as e:
-        logger.error(f"❌ Error al crear el archivo de texto para FFmpeg: {e}")
+        logger.error(f"❌ Error al crear el archivo de texto: {e}")
         return False
 
-    # Comando FFmpeg OPTIMIZADO: 720x1280 (720p)
+    # AJUSTES DE CROMA (VERDE EXACTO DEL SERVER NORMAL Y SIMILITUD BAJA PARA PROTEGER EL AZUL)
+    CHROMA_COLOR = "0x00bf63"
+    CHROMA_SIMILARITY = "0.08" # Bajamos de 0.15 a 0.08 para que NO borre el color azul
+    CHROMA_BLEND = "0.05"
+
+    # Comando FFmpeg con la magia del "Mini" centrado
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1", "-i", image_path,        # Entrada 0: Imagen de fondo
-        "-i", presenter_path,                 # Entrada 1: Presentador vertical (pantalla verde)
-        "-i", audio_path,                     # Entrada 2: Audio TTS
+        "-loop", "1", "-i", image_path,        # [0:v] Imagen de la noticia
+        "-i", presenter_path,                  # [1:v] Presentador (Diseño normal)
+        "-i", audio_path,                      # [2:a] Audio TTS
         "-filter_complex",
         (
-            # 1. Escalar y recortar la imagen de fondo para que llene el formato 1080x1920
-            f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920:(iw-ow)/2:(ih-oh)/2[bg];"
-            
-            # 2. Escalar el video del presentador para que se ajuste a la anchura (1080)
-            f"[1:v]scale=1080:-1[v_scaled];"
-            
-            # 3. Aplicar Chroma Key (quitar pantalla verde) con los NUEVOS VALORES
-            f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
-            
-            # 4. Crear efecto boomerang/loop para el presentador
-            f"[v_keyed]split[main][reverse_copy];"
-            f"[reverse_copy]reverse[v_reversed];"
-            f"[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
-            f"[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
-            
-            # 5. Superponer el presentador sobre el fondo
-            # ANTES: overlay=(W-w)/2:(H-h)/2 (centrado)
-            # AHORA: overlay=(W-w)/2:(H-h)/2+200 👈 HE BAJADO LA IMAGEN 200 PÍXELES
-            f"[bg][presenter_loop]overlay=(W-w)/2:(H-h)/2+200:shortest=1[comp];"
-            
-            # 6. Dibujar el título abajo (ajustado para Shorts)
-            # ANTES: x=50:y=h-350
-            # AHORA: x=50:y=h-150 👈 HE BAJADO EL TÍTULO MUCHO MÁS, a 150 píxeles del borde inferior
-            f"[comp]drawtext=fontfile='{font_path}':text='{clean_title}':"
-            f"fontcolor=white:fontsize=50:line_spacing=15:"
-            f"shadowcolor=black@1.0:shadowx=5:shadowy=5:"
-            f"x=50:y=h-150[outv]"
-        ),
-        "-map", "[outv]", "-map", "2:a",        
-        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24", 
-        "-c:a", "aac", "-b:a", "128k", "-shortest", output_path 
-    ]
-
-    try:
-        logger.info("🎬 Iniciando renderizado FFmpeg en 720p (Optimizado para t3.micro)...")
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600, text=True)
-        return os.path.exists(output_path) and os.path.getsize(output_path) > 1000
-    except subprocess.TimeoutExpired:
-        logger.error("❌ ERROR CRÍTICO: El renderizado para Shorts superó el timeout.")
-        return False
-    except subprocess.CalledProcessError as err:
-        logger.error(f"❌ Fallo interno en FFmpeg. EL MOTIVO EXACTO ES:\n{err.stderr}")
-        return False
-    finally:
-        if os.path.exists(text_file_path):
-            os.remove(text_file_path)
-    """Renderiza el video final para YouTube Shorts (vertical)"""
-    SHORT_PRESENTER_FILENAME = "presenter_short.mp4" 
-    presenter_path = os.path.join(ASSETS_DIR, SHORT_PRESENTER_FILENAME)
-    font_path = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
-    clean_title = prepare_text_for_video(text_title)
-
-    if not os.path.exists(presenter_path):
-        logger.error(f"❌ No se encontró el video del presentador vertical en: {presenter_path}")
-        return False
-
-    # 1. SOLUCIÓN: Guardar el texto en un archivo temporal para evitar errores de saltos de línea en FFmpeg
-    text_file_path = os.path.join(TEMP_IMG, f"title_{uuid.uuid4().hex[:6]}.txt")
-    try:
-        with open(text_file_path, "w", encoding="utf-8") as f:
-            f.write(clean_title)
-    except Exception as e:
-        logger.error(f"❌ Error al crear el archivo de texto para FFmpeg: {e}")
-        return False
-
-    # Comando FFmpeg para formato vertical (Shorts - 1080x1920)
-    cmd = [
-        "ffmpeg", "-y",
-        "-loop", "1", "-i", image_path,        
-        "-i", presenter_path,                 
-        "-i", audio_path,                     
-        "-filter_complex",
-        (
-            # 2. SOLUCIÓN: Usar un lienzo negro independiente y colocar la imagen encima, evita crasheos de geometría.
+            # 1. Crear lienzo vertical negro (liviano para que la t3.micro no sufra)
             "color=c=black:s=1080x1920[canvas];"
-            "[0:v]scale=1080:-1[img_scaled];"
-            "[canvas][img_scaled]overlay=(W-w)/2:(H-h)/2-150[bg];"
-            
-            "[1:v]scale=1080:-1[v_scaled];"
+
+            # 2. Preparar el fondo de la imagen exactamente como el video normal (1280x720)
+            "[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720:(iw-ow)/2:(ih-oh)/2[bg_normal];"
+
+            # 3. Escalar el video del presentador a 720 de alto
+            "[1:v]scale=-1:720[v_scaled];"
+
+            # 4. Quitar fondo verde (con el ajuste estricto para no borrar otros colores)
             f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
-            
+
+            # 5. Efecto Boomerang continuo del presentador
             "[v_keyed]split[main][reverse_copy];"
             "[reverse_copy]reverse[v_reversed];"
             "[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
             "[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
-            
-            "[bg][presenter_loop]overlay=0:0[comp];"
-            
-            # 3. SOLUCIÓN: Usar textfile en lugar de text directamente
-            f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
-            f"fontcolor=white:fontsize=45:line_spacing=15:"
-            f"shadowcolor=black@1.0:shadowx=5:shadowy=5:"
-            f"x=40:y=1150[outv]"
+
+            # 6. Unir el presentador con la imagen de fondo (Diseño normal)
+            "[bg_normal][presenter_loop]overlay=(W-w)/2:(H-h)/2:shortest=1[comp_normal];"
+
+            # 7. Agregar el texto exactamente en la misma posición del servidor normal
+            f"[comp_normal]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
+            f"fontcolor=white:fontsize=40:line_spacing=12:"
+            f"shadowcolor=black@1.0:shadowx=4:shadowy=4:"
+            f"x=30:y=h-145[landscape_final];"
+
+            # 8. ACHICAR EL DISEÑO (Hacerlo "Mini") para que quepa perfecto en la pantalla del celular (1080 de ancho)
+            "[landscape_final]scale=1080:-1[mini_landscape];"
+
+            # 9. Colocar el video Mini en todo el CENTRO del lienzo vertical negro
+            "[canvas][mini_landscape]overlay=0:(H-h)/2[outv]"
         ),
-        "-map", "[outv]", "-map", "2:a",        
-        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24", 
-        "-c:a", "aac", "-b:a", "128k", "-shortest", output_path 
+        "-map", "[outv]", "-map", "2:a",
+        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24",
+        "-c:a", "aac", "-b:a", "128k", "-shortest", output_path
     ]
 
     try:
-        logger.info("🎬 Iniciando renderizado de Video para Shorts en FFmpeg...")
-        
-        # 4. SOLUCIÓN: Capturar el error exacto quitando DEVNULL
+        logger.info("🎬 Iniciando renderizado FFmpeg (Diseño Normal Centrado)...")
         subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600, text=True)
-        
         return os.path.exists(output_path) and os.path.getsize(output_path) > 1000
-        
     except subprocess.TimeoutExpired:
-        logger.error("❌ ERROR CRÍTICO: El renderizado para Shorts superó el timeout.")
+        logger.error("❌ ERROR CRÍTICO: Timeout en FFmpeg.")
         return False
     except subprocess.CalledProcessError as err:
-        # AQUÍ ESTÁ LA MAGIA: Si vuelve a fallar, nos dirá el error EXACTO
-        logger.error(f"❌ Fallo interno en FFmpeg. EL MOTIVO EXACTO ES:\n{err.stderr}")
+        logger.error(f"❌ Fallo interno en FFmpeg. MOTIVO EXACTO:\n{err.stderr}")
         return False
     finally:
-        # Limpiamos el archivo de texto temporal
+        # Limpieza del archivo de texto
         if os.path.exists(text_file_path):
             os.remove(text_file_path)
+
 # ==============================================================================
 # 5. GESTIÓN Y SUBIDA A YOUTUBE (CON ROTACIÓN)
 # ==============================================================================
