@@ -233,10 +233,15 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         return False
 
     # Guardar texto en archivo temporal para evitar errores con caracteres raros
+# Guardar texto en archivo temporal para evitar errores con caracteres raros
     text_file_path = os.path.join(TEMP_IMG, f"title_{uuid.uuid4().hex[:6]}.txt")
     try:
+        import textwrap
+        # El width=16 obliga a que cada renglón tenga máximo ~16 letras (aprox 2 a 3 palabras)
+        texto_cortado = textwrap.fill(clean_title, width=16)
+        
         with open(text_file_path, "w", encoding="utf-8") as f:
-            f.write(clean_title)
+            f.write(texto_cortado)
     except Exception as e:
         logger.error(f"❌ Error al crear el archivo de texto: {e}")
         return False
@@ -279,7 +284,7 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
             f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
             f"fontcolor=white:fontsize=35:line_spacing=20:"
             f"shadowcolor=black@1.0:shadowx=4:shadowy=4:"
-            f"x=65:y=1450[outv]"
+            f"x=65:y=1300[outv]"
         ),
         "-map", "[outv]", "-map", "2:a",
         "-c:v", "libx264", "-preset", "ultrafast", "-r", "24",
