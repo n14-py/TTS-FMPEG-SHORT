@@ -234,11 +234,12 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
 
     # Guardar texto en archivo temporal para evitar errores con caracteres raros
 # Guardar texto en archivo temporal para evitar errores con caracteres raros
+# Guardar texto en archivo temporal con límite de 30 caracteres por línea
     text_file_path = os.path.join(TEMP_IMG, f"title_{uuid.uuid4().hex[:6]}.txt")
     try:
         import textwrap
-        # El width=16 obliga a que cada renglón tenga máximo ~16 letras (aprox 2 a 3 palabras)
-        texto_cortado = textwrap.fill(clean_title, width=16)
+        # width=30 permite aproximadamente 30 letras/espacios antes de bajar de línea
+        texto_cortado = textwrap.fill(clean_title, width=30)
         
         with open(text_file_path, "w", encoding="utf-8") as f:
             f.write(texto_cortado)
@@ -282,7 +283,7 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
             # 5. EL TEXTO: Lo dibujamos por encima de todo. 
             # Ajusté la posición (Y=h-350) para que quede bien en formato celular vertical.
             f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
-            f"fontcolor=white:fontsize=35:line_spacing=20:"
+            f"fontcolor=white:fontsize=30:line_spacing=10:"
             f"shadowcolor=black@1.0:shadowx=4:shadowy=4:"
             f"x=65:y=1300[outv]"
         ),
