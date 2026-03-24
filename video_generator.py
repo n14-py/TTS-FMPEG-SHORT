@@ -276,10 +276,11 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
             # 5. EL TEXTO: Lo dibujamos por encima de todo. 
             # Ajusté la posición (Y=h-350) para que quede bien en formato celular vertical.
 # 5. EL TEXTO: Más chico (35), centrado horizontalmente y posicionado bien arriba
+# 5. EL TEXTO: Mucho más a la izquierda y más abajo
             f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
             f"fontcolor=white:fontsize=35:line_spacing=20:"
             f"shadowcolor=black@1.0:shadowx=4:shadowy=4:"
-            f"x=(w-text_w)/2:y=1000[outv]"
+            f"x=80:y=1000[outv]"
         ),
         "-map", "[outv]", "-map", "2:a",
         "-c:v", "libx264", "-preset", "ultrafast", "-r", "24",
