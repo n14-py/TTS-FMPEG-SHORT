@@ -253,38 +253,42 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
     CHROMA_BLEND = "0.05"
 
     # Comando FFmpeg con la lógica de Capas (Fondo = Imagen | Frente = Presentador)
-
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1", "-i", image_path,        # [0:v] Imagen de la noticia
-        "-i", presenter_path,                  # [1:v] Presentador Vertical
+        "-loop", "1", "-i", image_path,        # [0:v] Imagen de la noticia (Capa de abajo)
+        "-i", presenter_path,                  # [1:v] Presentador Vertical (Capa de arriba)
         "-i", audio_path,                      # [2:a] Audio TTS
         "-filter_complex",
         (
-            # 1. IMAGEN DE FONDO (Optimizada a 720x1280 para velocidad)
+            # 1. CAPA DE ABAJO (LA IMAGEN): La escalamos para que entre en 1080x1920
+            # SIN RECORTAR (mantiene su formato original) y la centramos en un lienzo negro.
+            # 1. CAPA DE ABAJO: Bajamos la imagen un 5% (agregando +100 a la posición Y)
+# 1. CAPA DE ABAJO: Subimos la imagen un 3% respecto a la anterior (ajustando a +40)
             "[0:v]scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2+40:color=black[bg_img];"
-            
-            # 2. PRESENTADOR Y CROMA VERDE
             f"[1:v]scale=720:1280[v_scaled];"
             f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
 
-            # 3. BUCLE NORMAL (Eliminamos el "reverse" para no saturar la RAM)
-            "[v_keyed]loop=-1:size=32767:start=0[presenter_loop];"
+            # 3. Efecto Boomerang continuo del presentador
+            "[v_keyed]split[main][reverse_copy];"
+            "[reverse_copy]reverse[v_reversed];"
+            "[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
+            "[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
 
-            # 4. SUPERPOSICIÓN
+            # 4. LA MAGIA (OVERLAY): Ponemos al Presentador POR ENCIMA de la Imagen.
+            # Como el presentador tiene el hueco transparente, la imagen se verá a través.
             "[bg_img][presenter_loop]overlay=0:0:shortest=1[comp];"
 
-            # 5. TEXTO (Ajustado para 720x1280)
+            # 5. EL TEXTO: Lo dibujamos por encima de todo. 
+            # Ajusté la posición (Y=h-350) para que quede bien en formato celular vertical.
             f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
-            f"fontcolor=white:fontsize=28:line_spacing=15:"
-            f"shadowcolor=black@1.0:shadowx=3:shadowy=3:"
-            f"x=40:y=900[outv]"
+            f"fontcolor=white:fontsize=34:line_spacing=19:"
+            f"shadowcolor=black@1.0:shadowx=4:shadowy=4:"
+            f"x=65:y=1300[outv]"
         ),
         "-map", "[outv]", "-map", "2:a",
-        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24", "-threads", "1",
+        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24",
         "-c:a", "aac", "-b:a", "128k", "-shortest", output_path
     ]
-
 
     try:
         logger.info("🎬 Iniciando renderizado FFmpeg (Presentador Vertical Full Screen)...")
