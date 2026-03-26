@@ -264,10 +264,8 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
             # SIN RECORTAR (mantiene su formato original) y la centramos en un lienzo negro.
             # 1. CAPA DE ABAJO: Bajamos la imagen un 5% (agregando +100 a la posición Y)
 # 1. CAPA DE ABAJO: Subimos la imagen un 3% respecto a la anterior (ajustando a +40)
-            "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2+40:color=black[bg_img];"
-            # 2. CAPA DE ARRIBA (EL PERIODISTA): Forzamos a 1080x1920 para que ocupe TODA LA PANTALLA
-            # y le aplicamos el croma para volver transparente el cuadro verde.
-            f"[1:v]scale=1080:1920[v_scaled];"
+            "[0:v]scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2+40:color=black[bg_img];"
+            f"[1:v]scale=720:1280[v_scaled];"
             f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
 
             # 3. Efecto Boomerang continuo del presentador
