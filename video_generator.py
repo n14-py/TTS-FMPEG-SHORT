@@ -286,7 +286,7 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
             f"x=65:y=1300[outv]"
         ),
         "-map", "[outv]", "-map", "2:a",
-        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24",
+        "-c:v", "libx264", "-preset", "ultrafast", "-r", "24", "-threads", "1",
         "-c:a", "aac", "-b:a", "128k", "-shortest", output_path
     ]
 
