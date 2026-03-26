@@ -287,6 +287,8 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         ),
         "-map", "[outv]", "-map", "2:a",
         "-c:v", "libx264", "-preset", "ultrafast", "-r", "24",
+        "-threads", "2",
+        "-max_muxing_queue_size", "1024",
         "-c:a", "aac", "-b:a", "128k", "-shortest", output_path
     ]
 
@@ -435,9 +437,16 @@ def process_video_task(text_content, title, image_url, article_id, article_url="
         # ---------------------------------------------------------
         # PASO 1: IMAGEN
         # ---------------------------------------------------------
+# ---------------------------------------------------------
+        # PASO 1: IMAGEN (Con Salvavidas Anti-Errores)
+        # ---------------------------------------------------------
         if not download_image_robust(image_url, raw_img_path): 
-            logger.error("Fallo al descargar la imagen. Abortando tarea.")
-            return None
+            logger.warning("⚠️ La imagen original está bloqueada o rota. Usando imagen de respaldo...")
+            fallback_url = "https://noticias.lat/favicon.png"
+            
+            if not download_image_robust(fallback_url, raw_img_path, retries=1):
+                logger.error("❌ Fallo incluso la imagen de respaldo. Abortando.")
+                return None
 
         # ---------------------------------------------------------
         # PASO 2: AUDIO
