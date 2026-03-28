@@ -265,7 +265,7 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
             "[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
             "[bg_img][presenter_loop]overlay=0:0:shortest=1[comp];"
             f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
-            f"fontcolor=white:fontsize=34:line_spacing=19:"
+            f"fontcolor=white:fontsize=30:line_spacing=19:"
             f"shadowcolor=black@1.0:shadowx=4:shadowy=4:"
             f"x=43:y=866[outv]"
         ),
@@ -477,9 +477,13 @@ def process_video_task(text_content, title, image_url, article_id, article_url="
         # 👈 HE CAMBIADO ESTA LÍNEA PARA INCLUIR #Shorts Y #short al principio
         desc += "#Shorts #short #noticias #actualidad #internacional"
         
+
         # ---------------------------------------------------------
         # PASO 5: SUBIDA A YOUTUBE
         # ---------------------------------------------------------
+        logger.info("⏳ Video listo. Esperando 4 minutos (240 segundos) antes de subir a YouTube para no hacer spam...")
+        time.sleep(240)
+        
         video_id = upload_video(final_video_path, title, desc, ["noticias"])
 
         if video_id:
