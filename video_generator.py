@@ -222,8 +222,7 @@ async def generate_audio_edge(text, output_file):
         return False
 
 def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
-    """Renderiza el video final para Shorts: Presentador Full Screen Vertical por encima."""
-    # Aquí SÍ usamos tu presentador en formato vertical
+    """Renderiza el video final para Shorts usando TODA la potencia de FFmpeg."""
     presenter_path = os.path.join(ASSETS_DIR, "presenter.mp4")
     font_path = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     clean_title = prepare_text_for_video(text_title)
@@ -232,54 +231,38 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         logger.error(f"❌ No se encontró el video del presentador en: {presenter_path}")
         return False
 
-    # Guardar texto en archivo temporal para evitar errores con caracteres raros
-# Guardar texto en archivo temporal para evitar errores con caracteres raros
-# Guardar texto en archivo temporal con límite de 30 caracteres por línea
+    # Guardar texto en archivo temporal
     text_file_path = os.path.join(TEMP_IMG, f"title_{uuid.uuid4().hex[:6]}.txt")
     try:
         import textwrap
-        # width=30 permite aproximadamente 30 letras/espacios antes de bajar de línea
         texto_cortado = textwrap.fill(clean_title, width=30)
-        
         with open(text_file_path, "w", encoding="utf-8") as f:
             f.write(texto_cortado)
     except Exception as e:
         logger.error(f"❌ Error al crear el archivo de texto: {e}")
         return False
 
-    # AJUSTES DE CROMA: Súper estricto para que SOLO borre el verde y salve el azul del traje
+    # AJUSTES DE CROMA
     CHROMA_COLOR = "0x00bf63"
     CHROMA_SIMILARITY = "0.08" 
     CHROMA_BLEND = "0.05"
 
-    # Comando FFmpeg con la lógica de Capas (Fondo = Imagen | Frente = Presentador)
+    # Comando FFmpeg SIN LÍMITES de hilos, exactamente igual que el de 5 minutos
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1", "-i", image_path,        # [0:v] Imagen de la noticia (Capa de abajo)
-        "-i", presenter_path,                  # [1:v] Presentador Vertical (Capa de arriba)
-        "-i", audio_path,                      # [2:a] Audio TTS
+        "-loop", "1", "-i", image_path,        
+        "-i", presenter_path,                  
+        "-i", audio_path,                      
         "-filter_complex",
         (
-            # 1. CAPA DE ABAJO (LA IMAGEN): La escalamos para que entre en 1080x1920
-            # SIN RECORTAR (mantiene su formato original) y la centramos en un lienzo negro.
-            # 1. CAPA DE ABAJO: Bajamos la imagen un 5% (agregando +100 a la posición Y)
-# 1. CAPA DE ABAJO: Subimos la imagen un 3% respecto a la anterior (ajustando a +40)
             "[0:v]scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2+40:color=black[bg_img];"
             f"[1:v]scale=720:1280[v_scaled];"
             f"[v_scaled]chromakey={CHROMA_COLOR}:{CHROMA_SIMILARITY}:{CHROMA_BLEND}[v_keyed];"
-
-            # 3. Efecto Boomerang continuo del presentador
             "[v_keyed]split[main][reverse_copy];"
             "[reverse_copy]reverse[v_reversed];"
             "[main][v_reversed]concat=n=2:v=1:a=0[boomerang];"
             "[boomerang]loop=-1:size=32767:start=0[presenter_loop];"
-
-            # 4. LA MAGIA (OVERLAY): Ponemos al Presentador POR ENCIMA de la Imagen.
-            # Como el presentador tiene el hueco transparente, la imagen se verá a través.
             "[bg_img][presenter_loop]overlay=0:0:shortest=1[comp];"
-
-            # 5. EL TEXTO: Lo dibujamos por encima de todo. 
-            # Ajusté la posición (Y=h-350) para que quede bien en formato celular vertical.
             f"[comp]drawtext=fontfile='{font_path}':textfile='{text_file_path}':"
             f"fontcolor=white:fontsize=34:line_spacing=19:"
             f"shadowcolor=black@1.0:shadowx=4:shadowy=4:"
@@ -287,23 +270,23 @@ def render_video_ffmpeg(image_path, audio_path, text_title, output_path):
         ),
         "-map", "[outv]", "-map", "2:a",
         "-c:v", "libx264", "-preset", "ultrafast", "-r", "24",
-        "-threads", "2",
-        "-max_muxing_queue_size", "1024",
+        # Eliminamos el "-threads 2" y el "-max_muxing_queue_size" para que use 100% de CPU
         "-c:a", "aac", "-b:a", "128k", "-shortest", output_path
     ]
 
     try:
-        logger.info("🎬 Iniciando renderizado FFmpeg (Presentador Vertical Full Screen)...")
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=600, text=True)
+        logger.info("🎬 Iniciando renderizado FFmpeg (Presentador Vertical Full Screen a máxima potencia)...")
+        # EL FIX CRÍTICO: Usamos DEVNULL para que la consola no se llene y cuelgue el servidor
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+        
         return os.path.exists(output_path) and os.path.getsize(output_path) > 1000
     except subprocess.TimeoutExpired:
         logger.error("❌ ERROR CRÍTICO: Timeout en FFmpeg.")
         return False
     except subprocess.CalledProcessError as err:
-        logger.error(f"❌ Fallo interno en FFmpeg. MOTIVO EXACTO:\n{err.stderr}")
+        logger.error(f"❌ Fallo interno en FFmpeg.")
         return False
     finally:
-        # Limpieza del archivo de texto
         if os.path.exists(text_file_path):
             os.remove(text_file_path)
 # ==============================================================================
