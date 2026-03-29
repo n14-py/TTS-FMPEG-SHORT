@@ -481,8 +481,8 @@ def process_video_task(text_content, title, image_url, article_id, article_url="
         # ---------------------------------------------------------
         # PASO 5: SUBIDA A YOUTUBE
         # ---------------------------------------------------------
-        logger.info("⏳ Video listo. Esperando 4 minutos (240 segundos) antes de subir a YouTube para no hacer spam...")
-        time.sleep(240)
+        logger.info("⏳ Video listo. Esperando 7 minutos (420 segundos) antes de subir a YouTube para no hacer spam...")
+        time.sleep(420)
         
         video_id = upload_video(final_video_path, title, desc, ["noticias"])
 
