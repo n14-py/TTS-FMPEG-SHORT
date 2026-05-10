@@ -77,31 +77,31 @@ LAYOUT_CONFIG = {
     "intro_layout_05.mp4": {"texto_x": -1000, "texto_y": -1500, "color": "white", "font_size": 65, "max_letras_por_linea": 30},
 
     # --- HOMBRE ---
-    "hombre_layout_01.mp4": {"texto_x": 59,  "texto_y": 1560, "color": "white", "font_size": 38, "max_letras_por_linea": 58},
-    "hombre_layout_02.mp4": {"texto_x": 52, "texto_y": 1421, "color": "white", "font_size": 42, "max_letras_por_linea": 42},
-    "hombre_layout_03.mp4": {"texto_x": 43,  "texto_y": 1574, "color": "yellow", "font_size": 42, "max_letras_por_linea": 48},
+    "hombre_layout_01.mp4": {"texto_x": 65,  "texto_y": 1560, "color": "white", "font_size": 38, "max_letras_por_linea": 58},
+    "hombre_layout_02.mp4": {"texto_x": 65, "texto_y": 1421, "color": "white", "font_size": 42, "max_letras_por_linea": 40},
+    "hombre_layout_03.mp4": {"texto_x": 65,  "texto_y": 1574, "color": "yellow", "font_size": 42, "max_letras_por_linea": 48},
     "hombre_layout_04.mp4": {"texto_x": 99, "texto_y": 1364, "color": "white", "font_size": 38, "max_letras_por_linea": 45},
     "hombre_layout_05.mp4": {"texto_x": 44,  "texto_y": 1661, "color": "white", "font_size": 39, "max_letras_por_linea": 47},
     "hombre_layout_06.mp4": {"texto_x": 85,  "texto_y": 1352, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
-    "hombre_layout_07.mp4": {"texto_x": 49,  "texto_y": 1565, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
+    "hombre_layout_07.mp4": {"texto_x": 65,  "texto_y": 1565, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
 
     # --- MUJER ---
-    "mujer_layout_01.mp4": {"texto_x": 59,  "texto_y": 1560, "color": "white", "font_size": 38, "max_letras_por_linea": 55},
-    "mujer_layout_02.mp4": {"texto_x": 52, "texto_y": 1421, "color": "white", "font_size": 42, "max_letras_por_linea": 42},
-    "mujer_layout_03.mp4": {"texto_x": 43,  "texto_y": 1574, "color": "yellow", "font_size": 42, "max_letras_por_linea":48},
+    "mujer_layout_01.mp4": {"texto_x": 65,  "texto_y": 1560, "color": "white", "font_size": 38, "max_letras_por_linea": 55},
+    "mujer_layout_02.mp4": {"texto_x": 65, "texto_y": 1421, "color": "white", "font_size": 42, "max_letras_por_linea": 40},
+    "mujer_layout_03.mp4": {"texto_x": 65,  "texto_y": 1574, "color": "yellow", "font_size": 42, "max_letras_por_linea":48},
     "mujer_layout_04.mp4": {"texto_x": 99, "texto_y": 1364, "color": "white", "font_size": 38, "max_letras_por_linea": 45},
     "mujer_layout_05.mp4": {"texto_x": 44,  "texto_y": 1661, "color": "white", "font_size": 39, "max_letras_por_linea": 47},
     "mujer_layout_06.mp4": {"texto_x": 85,  "texto_y": 1352, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
-    "mujer_layout_07.mp4": {"texto_x": 49,  "texto_y": 1565, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
+    "mujer_layout_07.mp4": {"texto_x": 65,  "texto_y": 1565, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
 
     # --- GRÁFICOS (SIN PRESENTADOR) ---
-    "grafico_layout_01.mp4": {"texto_x": 51,  "texto_y": 1560, "color": "white", "font_size": 38, "max_letras_por_linea": 55},
-    "grafico_layout_02.mp4": {"texto_x": 46, "texto_y": 1421, "color": "white", "font_size": 42, "max_letras_por_linea": 42},
-    "grafico_layout_03.mp4": {"texto_x": 33,  "texto_y": 1574, "color": "yellow", "font_size": 42, "max_letras_por_linea": 48},
+    "grafico_layout_01.mp4": {"texto_x": 65,  "texto_y": 1560, "color": "white", "font_size": 38, "max_letras_por_linea": 55},
+    "grafico_layout_02.mp4": {"texto_x": 65, "texto_y": 1421, "color": "white", "font_size": 42, "max_letras_por_linea": 40},
+    "grafico_layout_03.mp4": {"texto_x": 65,  "texto_y": 1574, "color": "yellow", "font_size": 42, "max_letras_por_linea": 48},
     "grafico_layout_04.mp4": {"texto_x": 99, "texto_y": 1364, "color": "white", "font_size": 38, "max_letras_por_linea": 45},
     "grafico_layout_05.mp4": {"texto_x": 44,  "texto_y": 1661, "color": "white", "font_size": 39, "max_letras_por_linea": 47},
     "grafico_layout_06.mp4": {"texto_x": 78,  "texto_y": 1352, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
-    "grafico_layout_07.mp4": {"texto_x": 49,  "texto_y": 1565, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
+    "grafico_layout_07.mp4": {"texto_x": 65,  "texto_y": 1565, "color": "white", "font_size": 39, "max_letras_por_linea": 49},
 }
 
 def get_layout_config(filename):
