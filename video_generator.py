@@ -386,11 +386,9 @@ def upload_video(file_path, title, description, tags, category_id="25"):
                 continue
             else:
                 logger.error(f"❌ Error HTTP en subida de Cuenta {account_index}: {e}")
-        except Exception as e:
-            logger.error(f"❌ Error general inesperado en Cuenta {account_index}: {e}")
-
-    logger.error("❌ ERROR CRÍTICO EN SUBIDA: Se agotaron todas las cuentas disponibles.")
-    return None
+                # FIX CRÍTICO: Si el error es otro (ej. Video Duplicado), abortamos. 
+                # No intentamos en las demás cuentas para tapar la fuga de saldo.
+                return None
 
 
 # ==============================================================================
