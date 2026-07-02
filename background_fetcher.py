@@ -61,26 +61,22 @@ def obtener_imagen_noticia(url, save_path, retries=3):
     if not url or url == "":
         url = URL_LOGO_FALLBACK
         
-    logger.info(f"  [Fetcher] Descargando imagen (Modo Browser): {url[:50]}...")
+    logger.info(f"  [Fetcher Short] Descargando imagen: {url[:50]}...")
     
-    # CABECERAS EXTREMAS: Engañamos a Cloudflare y Firewalls haciéndonos pasar por Chrome
-    headers_humanos = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-        'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Referer': 'https://www.google.com/',
-        'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'image',
-        'Sec-Fetch-Mode': 'no-cors',
-        'Sec-Fetch-Site': 'cross-site'
+    # 🎭 EL DISFRAZ PERFECTO QUE FUNCIONÓ EN TUS PRUEBAS
+    cabeceras_falsas = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Referer": "https://www.google.com/"
     }
 
     for attempt in range(retries):
-        # INTENTO 1: Requests con camuflaje total
+        # ==========================================
+        # INTENTO 1: Descarga Directa Disfrazada
+        # ==========================================
         try:
-            r = requests.get(url, headers=headers_humanos, verify=False, timeout=15)
+            r = requests.get(url, headers=cabeceras_falsas, timeout=10)
             if r.status_code == 200:
                 with open(save_path, 'wb') as f:
                     f.write(r.content)
@@ -89,18 +85,18 @@ def obtener_imagen_noticia(url, save_path, retries=3):
         except Exception:
             pass
 
-        # INTENTO 2: Curl con camuflaje total
+        # ==========================================
+        # INTENTO 2: El Puente de Google (Alternativa)
+        # ==========================================
         try:
-            cmd = [
-                "curl", "-L", "-k", "--retry", "2", "-s",
-                "-A", headers_humanos['User-Agent'],
-                "-H", f"Accept: {headers_humanos['Accept']}",
-                "-H", f"Referer: {headers_humanos['Referer']}",
-                "-o", save_path, url
-            ]
-            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if os.path.exists(save_path) and os.path.getsize(save_path) > 1024 and sanitizar_imagen(save_path):
-                return save_path
+            url_magica = f"https://images10-focus-opensocial.googleusercontent.com/gadgets/proxy?container=focus&refresh=2592000&url={url}"
+            r_proxy = requests.get(url_magica, timeout=10)
+            if r_proxy.status_code == 200:
+                with open(save_path, 'wb') as f:
+                    f.write(r_proxy.content)
+                if os.path.getsize(save_path) > 1024 and sanitizar_imagen(save_path):
+                    logger.info("  [Fetcher Short] Imagen obtenida exitosamente usando el Puente de Google.")
+                    return save_path
         except Exception:
             pass
             
@@ -109,7 +105,7 @@ def obtener_imagen_noticia(url, save_path, retries=3):
     # =========================================================================
     # EL 1% DE FALLO: SALVAVIDAS ACTIVADO (LOGO NOTICIAS.LAT)
     # =========================================================================
-    logger.warning(f"  [Fetcher] Bloqueo extremo detectado. Usando LOGO DE RESPALDO...")
+    logger.warning(f"  [Fetcher Short] Bloqueo extremo detectado. Usando LOGO DE RESPALDO...")
     try:
         r_logo = requests.get(URL_LOGO_FALLBACK, verify=False, timeout=10)
         if r_logo.status_code == 200:
@@ -118,7 +114,7 @@ def obtener_imagen_noticia(url, save_path, retries=3):
             if sanitizar_imagen(save_path):
                 return save_path
     except Exception as e:
-        logger.error(f"  [Fetcher] Falló hasta el logo de respaldo: {e}")
+        logger.error(f"  [Fetcher Short] Falló hasta el logo de respaldo: {e}")
         
     return None
 
@@ -126,10 +122,10 @@ def obtener_imagen_noticia(url, save_path, retries=3):
 # 2. RECOLECTOR DE MAPAS (MAPBOX) - ADAPTADO A VERTICAL
 # ==============================================================================
 def obtener_mapa_mapbox(ubicacion_texto, save_path):
-    logger.info(f"  [Fetcher] Generando mapa vertical para: '{ubicacion_texto}'")
+    logger.info(f"  [Fetcher Short] Generando mapa vertical para: '{ubicacion_texto}'")
     
     if MAPBOX_API_KEY == "TU_CLAVE_MAPBOX_AQUI":
-        logger.error("  [Fetcher] ERROR: Falta MAPBOX_API_KEY en el entorno.")
+        logger.error("  [Fetcher Short] ERROR: Falta MAPBOX_API_KEY en el entorno.")
         return None
 
     try:
@@ -140,7 +136,7 @@ def obtener_mapa_mapbox(ubicacion_texto, save_path):
         geo_data = geo_res.json()
         
         if not geo_data.get('features'):
-            logger.warning(f"  [Fetcher] Mapbox no reconoció el lugar '{ubicacion_texto}'.")
+            logger.warning(f"  [Fetcher Short] Mapbox no reconoció el lugar '{ubicacion_texto}'.")
             return None
             
         lon, lat = geo_data['features'][0]['center']
@@ -161,11 +157,11 @@ def obtener_mapa_mapbox(ubicacion_texto, save_path):
                     f.write(chunk)
             return save_path
         else:
-            logger.error(f"  [Fetcher] Error Mapbox: HTTP {mapa_res.status_code}")
+            logger.error(f"  [Fetcher Short] Error Mapbox: HTTP {mapa_res.status_code}")
             return None
             
     except Exception as e:
-        logger.error(f"  [Fetcher] Error fatal en Mapbox: {e}")
+        logger.error(f"  [Fetcher Short] Error fatal en Mapbox: {e}")
         return None
 
 # ==============================================================================
@@ -194,7 +190,7 @@ def obtener_video_stock(termino_busqueda, save_path):
     logger.info(f"  [Fetcher Short] Buscando video vertical B-Roll sobre: '{termino_busqueda}'")
     
     if PEXELS_API_KEY == "TU_CLAVE_PEXELS_AQUI":
-        logger.error("  [Fetcher] ERROR: Falta PEXELS_API_KEY.")
+        logger.error("  [Fetcher Short] ERROR: Falta PEXELS_API_KEY.")
         return None
 
     try:
@@ -207,7 +203,7 @@ def obtener_video_stock(termino_busqueda, save_path):
         data = response.json()
         
         if not data.get('videos') or len(data['videos']) == 0:
-            logger.warning(f"  [Fetcher] Cero resultados verticales en Pexels para '{termino_busqueda}'.")
+            logger.warning(f"  [Fetcher Short] Cero resultados verticales en Pexels para '{termino_busqueda}'.")
             return None
             
         videos_disponibles = [v for v in data['videos'] if v['id'] not in _historial_pexels]
@@ -239,7 +235,7 @@ def obtener_video_stock(termino_busqueda, save_path):
         if not video_link:
             return None
             
-        logger.info(f"  [Pexels] Descargando ID Vertical: {video_elegido['id']}")
+        logger.info(f"  [Pexels Short] Descargando ID Vertical: {video_elegido['id']}")
         
         r = requests.get(video_link, stream=True, timeout=30)
         if r.status_code == 200:
@@ -251,13 +247,13 @@ def obtener_video_stock(termino_busqueda, save_path):
                 if sanitizar_video(save_path):
                     return save_path
                 else:
-                    logger.warning("  [Fetcher] ¡Video falso/corrupto de Pexels detectado! Abortando escena.")
+                    logger.warning("  [Fetcher Short] ¡Video falso/corrupto de Pexels detectado! Abortando escena.")
                     os.remove(save_path)
                     return None
         
-        logger.error(f"  [Fetcher] Error descargando MP4: HTTP {r.status_code}")
+        logger.error(f"  [Fetcher Short] Error descargando MP4: HTTP {r.status_code}")
         return None
 
     except Exception as e:
-        logger.error(f"  [Fetcher] Error fatal en la API de Pexels: {e}")
+        logger.error(f"  [Fetcher Short] Error fatal en la API de Pexels: {e}")
         return None
