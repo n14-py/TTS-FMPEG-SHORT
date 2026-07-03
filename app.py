@@ -85,13 +85,13 @@ def handle_generate_video():
             "article_id": article_id
         }), 200
 
-    # 4. Intentar adquirir el control del servidor (Lock)
+# 4. Intentar adquirir el control del servidor (Lock)
     if processing_lock.acquire(blocking=False):
         logger.info(f"  [API Short] [Lock Adquirido] Iniciando producción para ID: {article_id}")
-        
-        # ----------------------------------------------------------------------
-        # HILO EN SEGUNDO PLANO (Background Task)
-        # ----------------------------------------------------------------------
+            
+# ----------------------------------------------------------------------
+            # HILO EN SEGUNDO PLANO (Background Task)
+            # ----------------------------------------------------------------------
         def background_task():
             try:
                 # Paso A: Fabricar el video vertical (Llama al orquestador)
@@ -205,9 +205,9 @@ def index():
 # 🎧 MICROSERVICIO DE AUDIO (Para el botón "Escuchar" de la App)
 # =====================================================================
 def background_audio_task(article_id, texto_completo):
-    logger.info(f"  [Audio Short] 🎙️ Iniciando locución completa para {article_id}")
+    logger.info(f"  [Audio] 🎙️ Iniciando locución completa para {article_id}")
     try:
-        nombre_archivo = f"audio_short_{article_id}.mp3"
+        nombre_archivo = f"audio_{article_id}.mp3"
         # Aseguramos que la carpeta temp exista antes de guardar el audio
         os.makedirs("temp", exist_ok=True)
         ruta_audio = f"temp/{nombre_archivo}" 

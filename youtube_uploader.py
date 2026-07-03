@@ -42,13 +42,15 @@ TAISLY_BASE_URL = "https://app.taisly.com/api/private"
 # Agrupación exacta extraída de tu consulta (3 Grupos: TikTok + Facebook)
 TAISLY_GROUPS = [
     # Grupo 0: noticias.lat (TikTok) + Noticias Lat (Facebook)
-    ["6a446bc0c66678771be347b0", "6a446c6fc66678771be347e3"],
+    ["6a446bc0c66678771be347b0", "6a446c6fc66678771be347e3", "6a468895c66678771be391f1"],
     
     # Grupo 1: noticias.lat0 (TikTok) + Noticias LAT Última Hora (Facebook)
     ["69fe63635270a878fbd897bc", "6a446c79c66678771be347f1"],
     
     # Grupo 2: noticias.lat2 (TikTok) + Noticias LAT AHORA (Facebook)
     ["6a45a0f0c66678771be378fb", "6a459e46c66678771be37573"]
+
+    
 ]
 
 # ==============================================================================
@@ -109,9 +111,12 @@ def push_to_taisly(file_path, title, description, tags, account_index):
     
     # Preparación segura del texto para TikTok/Facebook
     # Título + breve extracto + hashtags (limitado a unos ~450 caracteres por seguridad visual)
-    texto_post = f"{title}\n\n{description[:300]}..."
+# Preparación optimizada para TikTok, Instagram Reels y Facebook Reels
+    # Se permite más texto (hasta 1000 caracteres) y más hashtags (hasta 10)
+    texto_post = f"{title}\n\n{description[:800]}..."
+
     if tags:
-        texto_post += "\n\n" + " ".join([f"#{t}" for t in tags[:5]])
+        texto_post += "\n\n" + " ".join([f"#{t}" for t in tags[:10]])
 
     headers = {
         'Authorization': f'Bearer {TAISLY_API_KEY}'
