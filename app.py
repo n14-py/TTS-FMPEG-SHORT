@@ -266,13 +266,14 @@ def run_cleanup_loop():
         try:
             cloudflare_r2.delete_old_files_from_r2(days_old=28)
         except Exception as e:
-            logger.error(f"❌ Error en el bucle de limpieza automática de R2: {e}")
+            logger.error(f"  Error en el bucle de limpieza automática de R2: {e}")
         # Esperar 86400 segundos (24 horas) para la siguiente revisión
         time.sleep(86400)
 
+# --- NUEVO CÓDIGO: Lanzar el hilo fuera del if __name__ == '__main__' ---1
+# Al colocar esto aquí, nos aseguramos de que Render/Gunicorn inicie la limpieza automáticamente.
+cleanup_thread = threading.Thread(target=run_cleanup_loop, daemon=True)
+cleanup_thread.start()
+
 if __name__ == '__main__':
-    # Lanzar el hilo de limpieza en segundo plano al arrancar
-    cleanup_thread = threading.Thread(target=run_cleanup_loop, daemon=True)
-    cleanup_thread.start()
-    
     app.run(host='0.0.0.0', port=PORT)
