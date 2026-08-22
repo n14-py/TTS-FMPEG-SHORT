@@ -1,137 +1,133 @@
 # -*- coding: utf-8 -*-
-"""
-==============================================================================
-TEST LOCAL (Simulador de Node.js) - EDICIÓN SHORTS (9:16)
-==============================================================================
-Este payload masivo generará un video vertical, adaptando todos los fondos,
-presentadores, pexels y mapas a las resoluciones matemáticas de Shorts.
-"""
+# ==============================================================================
+# TEST LOCAL (Simulador de Node.js + MongoDB) - EDICIÓN SHORTS MULTI-ANUNCIO
+# ==============================================================================
+# Este payload simula a Gemini inyectando los 3 tipos de anuncios de tu base de datos:
+# 1. ad_mencion (Mención IA con presentador)
+# 2. banner_flotante (Inyectado como ad_banner_url en una escena normal)
+# 3. ad_video (Pausa comercial a pantalla completa)
 
 import logging
 from main_orchestrator import process_video_payload
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')
 
-def ejecutar_prueba_shorts():
+def ejecutar_prueba_multianuncio():
     print("\n" + "="*70)
-    print("🚀 INICIANDO PRODUCCIÓN: PRUEBA DE MOTOR SHORTS 9:16 🚀")
+    print("  INICIANDO PRUEBA SHORTS: 1 NOTICIA + 3 TIPOS DE ANUNCIOS (9:16)")
     print("="*70 + "\n")
 
-    # La imagen original de la noticia
-    img_noticia = "https://www.elfinanciero.com.mx/resizer/v2/BVLRGKWUCZAK5KQQI574NNPCWM.jpg?smart=true&auth=da160f5b33d3101bcf32028457ec9e5cc06b41c1ede1220bea5b502cb4ea547b&width=1200&height=630"
+    # NOTA: Rellena las URLs con los links completos (las que me pasaste terminaban en "...")
+    URL_MEDIA_PRUEBA = "https://pub-32bf4851ff77488ebe727d3dad5fbb4d.r2.dev/anuncios/ad_1786730829706_399759833.mp4"
+    URL_MEDIA = "https://pub-32bf4851ff77488ebe727d3dad5fbb4d.r2.dev/anuncios/ad_1786732163471_656237920.jpeg"
+    URL = "https://pub-32bf4851ff77488ebe727d3dad5fbb4d.r2.dev/anuncios/ad_1786734825986_647602327.jpeg"
+    
 
-    payload = {
-  "youtube_title": "¡Ecuador Rompe Récords Turísticos! 🇪🇨 #shorts #ecuador #turismo",
-  "youtube_description": "👉 ¡Suscríbete para más noticias!\n🌐 Lee la nota completa: https://www.noticias.lat/articulo/test_123\n\n#shorts #noticias\n\nEl turismo en Ecuador ha roto todos los récords históricos durante este último feriado nacional. Las autoridades confirmaron un aumento masivo de viajeros en todo el país, lo que ha generado una reactivación económica espectacular en los últimos años. Destinos costeros y de montaña alcanzaron una ocupación hotelera del cien por ciento. Restaurantes, comercios locales y empresas de transporte reportaron ingresos muy por encima de las expectativas trazadas por los gremios. El gobierno nacional ha destacado el comportamiento cívico de los ciudadanos y el arduo trabajo de las fuerzas de seguridad para garantizar que no se presenten incidentes graves durante estas festividades. La industria hotelera ya se prepara para la próxima temporada alta con gran optimismo. Las autoridades de tránsito inf",
+    payload =  {
+  "youtube_title": "¡Misterio Espacial! NASA detecta señal repetitiva",
+  "youtube_description": "¡Suscríbete para más noticias!\n Lee la nota completa: https://www.noticias.lat/articulo/id_test_shorts\n\n#shorts #noticias\n\nLa comunidad astronómica internacional se encuentra conmocionada tras el último anuncio de la NASA. Astrónomos utilizando el telescopio espacial James Webb han detectado una misteriosa y potente señal de radio que se repite exactamente cada 16 días, proveniente de una galaxia ubicada a millones de años luz de la Tierra. A diferencia de otras ráfagas rápidas de radio descubiertas en el pasado, este nuevo fenómeno presenta un patrón matemático casi perfecto, lo que ha desatado todo tipo de teorías. Algunos científicos sugieren que podría tratarse de una estrella de neutrones altamente magnetizada, conocida como púlsar, que gira a velocidades vertiginosas. Sin embargo, una pequeña facción de investigadores no descarta que estemos ante un intento de comunicación de una civilización extraterres",
   "youtube_tags": [
-    "Ecuador",
-    "Turismo",
-    "Economía",
-    "Viajes",
-    "Shorts"
+    "nasa",
+    "espacio",
+    "jameswebb",
+    "extraterrestres",
+    "astronomia",
+    "shorts"
   ],
   "scenes": [
     {
       "type": "intro",
-      "text": "Ahora Ecuador rompe récords históricos de turismo durante el último feriado nacional.",
+      "text": "¡Misterio total en el cosmos! La NASA acaba de captar una señal de radio extremadamente extraña, potente y muy repetitiva en el espacio.",
       "layout_category": "sin_presentador",
       "voice": "hombre_1",
-      "bgm_mood": "analisis",
+      "bgm_mood": "urgencia",
       "sfx_type": "impactos"
     },
     {
       "type": "body",
-      "text": "Las autoridades confirmaron un aumento masivo de viajeros en todo el país, generando una reactivación económica espectacular en los últimos años recientes.",
-      "image_url": "https://img.eldiario.ec/upload/2026/05/turismo.jpg",
+      "image_url": "https://img.freepik.com/fotos-premium/galaxia-espacio-estrellas_942223-110.jpg",
+      "layout_category": "mujer",
+      "text": "El telescopio espacial James Webb detectó una señal misteriosa proveniente de una galaxia lejana, ubicada a millones de años luz de nuestro planeta.",
+      "voice": "mujer_1",
+      "bgm_mood": "tension",
+      "sfx_type": "transiciones"
+    },
+    {
+      "type": "pexels",
+      "termino_busqueda": "space signal",
+      "ad_banner_url": "https://pub-32bf4851ff77488ebe727d3dad5fbb4d.r2.dev/anuncios/ad_1786751597341_210092002.jpeg",
       "layout_category": "sin_presentador",
+      "text": "Lo más impactante es que la señal se repite exactamente cada dieciséis días, siguiendo un patrón matemático casi perfecto y sumamente preciso.",
       "voice": "hombre_1",
+      "bgm_mood": "tension",
+      "sfx_type": "tecnologia"
+    },
+    {
+      "type": "body",
+      "image_url": "https://img.freepik.com/fotos-premium/galaxia-espacio-estrellas_942223-110.jpg",
+      "layout_category": "mujer",
+      "text": "Este fenómeno ha desatado diversas teorías científicas, ya que no se parece a ninguna ráfaga de radio vista anteriormente en el cosmos.",
+      "voice": "mujer_1",
       "bgm_mood": "analisis",
       "sfx_type": "transiciones"
     },
     {
       "type": "pexels",
-      "text": "Destinos costeros y de montaña alcanzaron una ocupación hotelera del cien por ciento, reflejando una demanda sin precedentes de los turistas nacionales.",
-      "termino_busqueda": "beach mountains",
+      "termino_busqueda": "neutron star",
       "layout_category": "sin_presentador",
+      "text": "Algunos expertos sugieren que podría ser un púlsar, que es básicamente una estrella de neutrones magnetizada que gira a velocidades realmente vertiginosas.",
       "voice": "hombre_1",
       "bgm_mood": "analisis",
-      "sfx_type": "transiciones"
+      "sfx_type": "tecnologia"
     },
     {
       "type": "pexels",
-      "text": "Restaurantes, comercios locales y empresas de transporte reportaron ingresos muy por encima de las expectativas trazadas por los gremios industriales del país.",
-      "termino_busqueda": "local restaurant",
-      "layout_category": "sin_presentador",
-      "voice": "hombre_1",
-      "bgm_mood": "analisis",
-      "sfx_type": "transiciones"
-    },
-    {
-      "type": "mapa",
-      "text": "El gobierno nacional destacó el comportamiento cívico de los ciudadanos y el arduo trabajo de seguridad para garantizar la paz social total.",
-      "ubicacion": "Ecuador",
-      "layout_category": "sin_presentador",
-      "voice": "hombre_1",
-      "bgm_mood": "analisis",
+      "termino_busqueda": "extraterrestrial signal",
+      "ad_banner_url": "https://pub-32bf4851ff77488ebe727d3dad5fbb4d.r2.dev/anuncios/ad_1786751597341_210092002.jpeg",
+      "layout_category": "mujer",
+      "text": "Sin embargo, una facción de investigadores no descarta que estemos ante un posible intento de comunicación de una civilización extraterrestre muy avanzada.",
+      "voice": "mujer_1",
+      "bgm_mood": "tension",
       "sfx_type": "alertas"
     },
     {
       "type": "pexels",
-      "text": "La industria hotelera ya se prepara para la próxima temporada alta con gran optimismo, esperando mantener este ritmo de crecimiento constante y fuerte.",
-      "termino_busqueda": "luxury hotel",
+      "termino_busqueda": "radio telescope",
       "layout_category": "sin_presentador",
-      "voice": "hombre_1",
-      "bgm_mood": "analisis",
-      "sfx_type": "transiciones"
-    },
-    {
-      "type": "pexels",
-      "text": "Autoridades de tránsito informaron que más de un millón de vehículos circularon por las carreteras, demostrando confianza total en la seguridad vial actual.",
-      "termino_busqueda": "highway traffic",
-      "layout_category": "sin_presentador",
+      "text": "Las agencias de Europa, Japón y China ya apuntan sus radiotelescopios hacia las coordenadas exactas para descifrar este gran enigma intergaláctico.",
       "voice": "hombre_1",
       "bgm_mood": "analisis",
       "sfx_type": "transiciones"
     },
     {
       "type": "body",
-      "text": "Este repunte representa un alivio crucial para la economía de las pequeñas familias emprendedoras que dependen directamente del flujo turístico nacional masivo.",
-      "image_url": "https://img.eldiario.ec/upload/2026/05/turismo.jpg",
-      "layout_category": "sin_presentador",
-      "voice": "hombre_1",
+      "image_url": "https://img.freepik.com/fotos-premium/galaxia-espacio-estrellas_942223-110.jpg",
+      "layout_category": "mujer",
+      "text": "El director de ciencias de la NASA pidió cautela, recordando que el universo tiene fenómenos naturales extremos que aún no comprendemos del todo.",
+      "voice": "mujer_1",
       "bgm_mood": "analisis",
       "sfx_type": "transiciones"
     },
     {
       "type": "pexels",
-      "text": "El país se consolida como destino líder, demostrando que su diversidad natural y calidez humana son motores clave del desarrollo económico sostenible.",
-      "termino_busqueda": "nature tourism",
+      "termino_busqueda": "galaxy stars",
       "layout_category": "sin_presentador",
+      "text": "¿Crees que estamos solos en el universo o que hemos encontrado a alguien? Déjanos tu opinión en los comentarios ahora mismo.",
       "voice": "hombre_1",
-      "bgm_mood": "analisis",
-      "sfx_type": "transiciones"
-    },
-    {
-      "type": "pexels",
-      "text": "Estas cifras récord marcan una nueva era para el turismo ecuatoriano, prometiendo un futuro próspero y sostenible para todas las provincias beneficiadas.",
-      "termino_busqueda": "happy tourists",
-      "layout_category": "sin_presentador",
-      "voice": "hombre_1",
-      "bgm_mood": "analisis",
+      "bgm_mood": "tension",
       "sfx_type": "impactos"
     }
   ]
 }
 
-
     resultado = process_video_payload(payload)
 
     print("\n" + "="*70)
     if resultado:
-        print(f"✅ ¡NOTICIERO SHORT CREADO EXITOSAMENTE!\n👉 Archivo guardado en: {resultado}")
+        print(f"  ¡NOTICIERO SHORT MULTI-ANUNCIO CREADO EXITOSAMENTE!\n  Archivo guardado en: {resultado}")
     else:
-        print("❌ LA PRUEBA HA FALLADO. Revisa los logs arriba para ver el error.")
+        print("  LA PRUEBA HA FALLADO. Revisa los logs arriba para ver el error.")
     print("="*70 + "\n")
 
 if __name__ == "__main__":
-    ejecutar_prueba_shorts()
+    ejecutar_prueba_multianuncio()
