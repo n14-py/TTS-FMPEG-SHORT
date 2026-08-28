@@ -44,7 +44,7 @@ def upload_media_to_r2(file_path, file_name):
             endpoint_url=f'https://{ACCOUNT_ID}.r2.cloudflarestorage.com',
             aws_access_key_id=ACCESS_KEY,
             aws_secret_access_key=SECRET_KEY,
-            config=Config(signature_version='s3v4')
+            config=Config(signature_version='s3v4', connect_timeout=10, read_timeout=30, retries={'max_attempts': 3})
         )
         
         logger.info(f"  [Cloudflare R2] 🚀 Iniciando subida a la nube: {file_name} ...")
@@ -97,7 +97,7 @@ def delete_old_files_from_r2(days_old=28):
             endpoint_url=f'https://{ACCOUNT_ID}.r2.cloudflarestorage.com',
             aws_access_key_id=ACCESS_KEY,
             aws_secret_access_key=SECRET_KEY,
-            config=Config(signature_version='s3v4')
+            config=Config(signature_version='s3v4', connect_timeout=10, read_timeout=30, retries={'max_attempts': 3})
         )
         
         logger.info(f"  [Cloudflare Limpieza] 🕒 Buscando archivos con más de {days_old} días de antigüedad...")
