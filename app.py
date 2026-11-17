@@ -93,6 +93,7 @@ def handle_generate_video():
             # HILO EN SEGUNDO PLANO (Background Task)
             # ----------------------------------------------------------------------
         def background_task():
+            video_publicado = False
             try:
                 # Paso A: Fabricar el video vertical (Llama al orquestador)
                 video_path = main_orchestrator.process_video_payload(payload)
@@ -120,6 +121,7 @@ def handle_generate_video():
                             
                         # Pasamos youtube_id Y url_r2 al webhook
                         _notificar_webhook_node("video_complete", article_id, youtube_id=youtube_id, video_url=url_r2)
+                        video_publicado = True
                         
                         # --- AUTODESTRUCCIÓN PARA LIBERAR ESPACIO ---
                         try:
@@ -149,6 +151,14 @@ def handle_generate_video():
                 processing_lock.release()
                 logger.info(f"  [API Short] [Lock Liberado] Servidor listo para nueva tarea.")
                 gc.collect()
+
+            # Recién cuando el video ya se publicó: revisar R2 y borrar
+            # audios y videos de más de 15 días. Si no hay, no cambia nada.
+            if video_publicado:
+                try:
+                    cloudflare_r2.delete_old_files_from_r2(days_old=15)
+                except Exception as e:
+                    logger.error(f"  [Cloudflare Limpieza] No se pudo revisar archivos viejos tras publicar: {e}")
 
         # Lanzar el hilo
         thread = threading.Thread(target=background_task)
@@ -264,7 +274,7 @@ def run_cleanup_loop():
     time.sleep(10)
     while True:
         try:
-            cloudflare_r2.delete_old_files_from_r2(days_old=28)
+            cloudflare_r2.delete_old_files_from_r2(days_old=15)
         except Exception as e:
             logger.error(f"  Error en el bucle de limpieza automática de R2: {e}")
         # Esperar 86400 segundos (24 horas) para la siguiente revisión

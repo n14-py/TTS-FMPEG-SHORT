@@ -82,10 +82,22 @@ def upload_media_to_r2(file_path, file_name):
         logger.error(f"  [Cloudflare R2] ❌ Error CRÍTICO durante la subida: {str(e)}")
         return None
 
-def delete_old_files_from_r2(days_old=28):
+# Solo se tocan audios y videos. El resto del bucket se deja como está.
+_EXTENSIONES_AUDIO_VIDEO = (
+    '.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.wma', '.opus',
+    '.mp4', '.mov', '.webm', '.mkv', '.avi', '.m4v', '.mpeg', '.mpg',
+)
+
+def _es_audio_o_video(key):
+    nombre = str(key).lower().split('?', 1)[0]
+    return nombre.endswith(_EXTENSIONES_AUDIO_VIDEO)
+
+def delete_old_files_from_r2(days_old=15):
     """
     Busca y elimina audios y videos en Cloudflare R2 que tengan más de 'days_old' días
     para evitar acumular costos de almacenamiento.
+    Si no hay nada tan viejo, no borra nada y sigue.
+    Recorre el bucket completo (no solo los primeros 1000 objetos).
     """
     if not all([ACCOUNT_ID, ACCESS_KEY, SECRET_KEY, BUCKET_NAME]):
         logger.error("  [Cloudflare Limpieza] ❌ Error: Faltan credenciales de R2.")
@@ -100,27 +112,33 @@ def delete_old_files_from_r2(days_old=28):
             config=Config(signature_version='s3v4', connect_timeout=10, read_timeout=30, retries={'max_attempts': 3})
         )
         
-        logger.info(f"  [Cloudflare Limpieza] 🕒 Buscando archivos con más de {days_old} días de antigüedad...")
+        logger.info(f"  [Cloudflare Limpieza] 🕒 Buscando audios y videos con más de {days_old} días de antigüedad...")
         
         fecha_limite = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days_old)
-        
-        response = s3.list_objects_v2(Bucket=BUCKET_NAME)
-        
-        if 'Contents' not in response:
+
+        archivos_borrados = 0
+        objetos_vistos = 0
+        paginator = s3.get_paginator('list_objects_v2')
+
+        for page in paginator.paginate(Bucket=BUCKET_NAME):
+            for obj in page.get('Contents', []):
+                objetos_vistos += 1
+                key = obj['Key']
+                if not _es_audio_o_video(key):
+                    continue
+                if obj['LastModified'] < fecha_limite:
+                    logger.info(f"  [Cloudflare Limpieza] 🗑️ Borrando archivo antiguo: {key}")
+                    s3.delete_object(Bucket=BUCKET_NAME, Key=key)
+                    archivos_borrados += 1
+
+        if objetos_vistos == 0:
             logger.info("  [Cloudflare Limpieza] 📭 El bucket está vacío, no hay nada que borrar.")
             return True
 
-        archivos_borrados = 0
-        for obj in response['Contents']:
-            if obj['LastModified'] < fecha_limite:
-                logger.info(f"  [Cloudflare Limpieza] 🗑️ Borrando archivo antiguo: {obj['Key']}")
-                s3.delete_object(Bucket=BUCKET_NAME, Key=obj['Key'])
-                archivos_borrados += 1
-                
         if archivos_borrados > 0:
             logger.info(f"  [Cloudflare Limpieza] ✅ Limpieza terminada. Se borraron {archivos_borrados} archivos.")
         else:
-            logger.info("  [Cloudflare Limpieza] ✨ No se encontraron archivos tan viejos para borrar hoy.")
+            logger.info("  [Cloudflare Limpieza] ✨ No se encontraron audios ni videos tan viejos. Se sigue igual.")
             
         return True
 

@@ -11,7 +11,16 @@ R2_ACCESS_KEY = os.getenv("R2_ACCESS_KEY")
 R2_SECRET_KEY = os.getenv("R2_SECRET_KEY")
 R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME")
 
-def limpiar_bucket_r2(dias_antiguedad=28):
+EXTENSIONES_AUDIO_VIDEO = (
+    ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".wma", ".opus",
+    ".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v", ".mpeg", ".mpg",
+)
+
+def _es_audio_o_video(key):
+    nombre = str(key).lower().split("?", 1)[0]
+    return nombre.endswith(EXTENSIONES_AUDIO_VIDEO)
+
+def limpiar_bucket_r2(dias_antiguedad=15):
     print("==================================================")
     print(" INICIANDO LIMPIEZA MASIVA EN CLOUDFLARE R2")
     print("==================================================")
@@ -40,7 +49,7 @@ def limpiar_bucket_r2(dias_antiguedad=28):
                 lote_a_borrar = []
                 
                 for obj in page['Contents']:
-                    if obj['LastModified'] < fecha_limite:
+                    if obj['LastModified'] < fecha_limite and _es_audio_o_video(obj['Key']):
                         # Guardamos el archivo para el borrado en lote y sumamos su peso
                         lote_a_borrar.append({'Key': obj['Key']})
                         bytes_liberados += obj['Size']
@@ -74,4 +83,4 @@ def limpiar_bucket_r2(dias_antiguedad=28):
     print("==================================================")
 
 if __name__ == '__main__':
-    limpiar_bucket_r2(dias_antiguedad=28)
+    limpiar_bucket_r2(dias_antiguedad=15)
