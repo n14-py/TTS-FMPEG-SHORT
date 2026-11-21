@@ -196,7 +196,7 @@ def obtener_video_stock(termino_busqueda, save_path):
     try:
         query = urllib.parse.quote(termino_busqueda)
         # MAGIA SHORTS: Cambiamos orientation a portrait (Vertical)
-        url = f"https://api.pexels.com/videos/search?query={query}&orientation=portrait&per_page=15"
+        url = f"https://api.pexels.com/v1/videos/search?query={query}&orientation=portrait&per_page=15"
         headers = {'Authorization': PEXELS_API_KEY}
         
         response = requests.get(url, headers=headers, timeout=10)
